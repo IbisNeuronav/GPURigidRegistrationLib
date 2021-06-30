@@ -14,7 +14,6 @@ See Copyright.txt or http://ibisneuronav.org/Copyright.html for details.
 #define __GPU_RigidRegistration_h_
 
 
-#include "imageobject.h"
 #include <vtkTransform.h>
 #include <vtkMatrix4x4.h>
 

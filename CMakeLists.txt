@@ -1,66 +1,47 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
-PROJECT( GPURigidRegistration )
+project( GPURigidRegistration )
 
 #----------------------------------------
-# Tell the compiler to use c++11 which is required with Qt >= 5.7
+# Tell the compiler to use c++11
 set( CMAKE_CXX_STANDARD 11 )
 #----------------------------------------
 
 #==================================================================
-# Look for VTK (required)
+# Look for VTK, only using vtkTransform, so any version should work
 #==================================================================
-set( AutoVtkPath ${CMAKE_CURRENT_BINARY_DIR} ) # dummy autopath to be changed
-set( VTK_LONG_VERSION "8.1.2" ) # need to be changed
-
-find_package(VTK ${VTK_LONG_VERSION} EXACT COMPONENTS vtkGUISupportQt vtkRenderingOpenGL vtkRenderingVolumeOpenGL vtkRenderingImage
-    vtkRenderingAnnotation vtkImagingStencil vtkImagingStatistics vtkFiltersTexture
-    vtkInteractionStyle vtkInteractionWidgets
-    vtkIOXML vtkIOLegacy vtkIOPLY NO_MODULE
-    PATHS ${AutoVtkPath} )
+find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
 #==================================================================
-# Look for ITK (required)
+# Look for ITK, version should be > 4.12
 #==================================================================
-set( AutoItkPath ${CMAKE_CURRENT_BINARY_DIR} ) # dummy autopath
-set( ITK_LONG_VERSION "4.13.3" )
-
-find_package( ITK ${ITK_LONG_VERSION} EXACT REQUIRED PATHS ${AutoItkPath} )
+find_package( ITK REQUIRED )
 include( ${ITK_USE_FILE} )
 
 #==================================================================
-# Look for Elastix (required by some plugins, but not the main app)
+# Look for Elastix 
 #==================================================================
-set( AutoElastixPath ${CMAKE_CURRENT_BINARY_DIR} ) # dummy autopath
-find_package( Elastix ${IBIS_ELASTIX_LONG_VERSION} REQUIRED EXACT PATHS ${AutoElastixPath} )
+find_package( Elastix REQUIRED )
 include( ${ELASTIX_USE_FILE} )
 # Elastix 4.9 does not seem to include CMAEvolutionStrategy directory, we need to do it manually
 include_directories( ${Elastix_DIR}/../src/Components/Optimizers/CMAEvolutionStrategy )
 
+#==================================================================
+# Define sources
+#==================================================================
+set( CL_files 
+        GPUDiscreteGaussianGradientImageFilter 
+        GPUGradientOrientationMatchingKernel)
 
+set( SRC_files
+        gpu_rigidregistration.cpp )
 
-
-
-SET( ITK_REGISTRATION_OPENCL_SRC
-    itkGPUGradientOrientationMatching.hxx
-    itkGPU3DRigidSimilarityMetric.h
-)
-
-SET( ITK_REGISTRATION_OPENCL_HDR
-    itkGPUGradientOrientationMatching.h
-)
-
-set( LibCL GPUDiscreteGaussianGradientImageFilter 
-    GPUGradientOrientationMatchingKernel
-)
-
-set( SRC_FILES
-        gpu_rigidregistration.cpp
-    )
-set( HEADER_FILES 
+set( HDR_files 
         gpu_rigidregistration.h
-    )
+        itkGPUGradientOrientationMatching.hxx
+        itkGPU3DRigidSimilarityMetric.h
+        itkGPUGradientOrientationMatching.h)
 
 #================================
 # Create custom commands to
@@ -68,7 +49,19 @@ set( HEADER_FILES
 # C string literal in a header
 # file.
 #================================
-foreach( file ${LibCL} )
+# Find vtkEncodeString utility executable. Look in built or installed dir structure
+set( vtkEncodeStringExeFile vtkEncodeString-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION} )
+find_program( VTK_ENCODESTRING_EXE ${vtkEncodeStringExeFile} PATHS
+              ${VTK_DIR}/bin/
+              ${VTK_DIR}/bin/Debug/
+              ${VTK_DIR}/bin/Release/
+              ${VTK_INSTALL_PREFIX}/bin
+              NO_DEFAULT_PATH )
+if( NOT VTK_ENCODESTRING_EXE )
+    message( FATAL_ERROR "the vtkEncodeString executable could not be found in the VTK directory.")
+endif()
+
+foreach( file ${CL_files} )
   set( clKernel_src ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cl )
   set( clKernel_cxx ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx )
   set( clKernel_h ${CMAKE_CURRENT_BINARY_DIR}/${file}.h )
@@ -77,37 +70,14 @@ foreach( file ${LibCL} )
     DEPENDS ${clKernel_src}
     COMMAND ${VTK_ENCODESTRING_EXE}
     ARGS ${clKernel_cxx} ${clKernel_src} ${file} --build-header " " vtkSystemIncludes.h )
-  set( LibCLSrc ${LibCLSrc} ${clKernel_src} ${clKernel_h} ${clKernel_cxx} )
-  set( LibCLHdr ${LibCLHdr} ${clKernel_h} )
+  set( SRC_CL ${SRC_CL} ${clKernel_src} ${clKernel_h} ${clKernel_cxx} )
+  set( HDR_CL ${HDR_CL} ${clKernel_h} )
 endforeach(file)
 
 #================================
 # Define output
 #================================
-
-#target_link_libraries( itkRegistrationOpenCL ${ITK_LIBRARIES}  ${OPENCL_LIBRARIES})
-
-#================================
-# Define include dir for
-# dependent projects
-#================================
-target_include_directories( itkRegistrationOpenCL PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR} ${OPENCL_INCLUDE_DIRS} )
-
-
-## need to check if all dependencies are found
-# IF( NOT OPENCL_FOUND )
-  # message( SEND_ERROR "OpenCL has not been found. This library is mandatory for the GPU Rigid Registration Plugin to build.\n" )
-# ENDIF()
-
-# IF( NOT ITK_USE_GPU )
-  # message( SEND_ERROR "GPU_RigidRegistration plugin cannot build if ITK was built without ITK_USE_GPU enabled.\n" )
-# ENDIF()
-
-# IF( NOT IBIS_USE_ELASTIX )
-  # message( SEND_ERROR "GPU_RigidRegistration plugin require Elastix library. Please enable IBIS_USE_ELASTIX.\n" )
-# ENDIF()
-
-
-#add library 
-target_link_libraries( ${SERC_FILES} ${HEADER_FILES} ${ITK_REGISTRATION_OPENCL_SRC} ${ITK_REGISTRATION_OPENCL_HDR} ${LibCLSrc} ${LibCLHdr} )
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_library( GPURigidRegistration ${SRC_files} ${HDR_files} ${SRC_CL} ${HDR_CL} )
+target_link_libraries( GPURigidRegistration ${ITK_LIBRARIES}  ${VTK_LIBRARIES} )
+target_include_directories( GPURigidRegistration PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )

@@ -10,6 +10,7 @@ See Copyright.txt or http://ibisneuronav.org/Copyright.html for details.
 =========================================================================*/
 // Thanks to Dante De Nigris for writing this class
 #include "gpu_rigidregistration.h"
+#include "itkGPU3DRigidSimilarityMetric.h"
 #include <vnl/algo/vnl_symmetric_eigensystem.h>
 #include <vnl/algo/vnl_real_eigensystem.h>
 #include <vtkSmartPointer.h>

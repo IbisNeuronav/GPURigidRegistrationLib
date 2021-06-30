@@ -33,7 +33,7 @@ class GPU_RigidRegistration
 public:
 
     typedef float PixelType;
-    constexpr unsigned int Dimension = 3;
+    static constexpr unsigned int Dimension = 3;
     typedef itk::Image<PixelType, Dimension> ImageType;
     
     typedef itk::CMAEvolutionStrategyOptimizer            OptimizerType;

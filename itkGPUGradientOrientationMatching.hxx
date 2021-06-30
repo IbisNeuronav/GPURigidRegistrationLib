@@ -10,8 +10,8 @@ See Copyright.txt or http://ibisneuronav.org/Copyright.html for details.
 =========================================================================*/
 // Thanks to Dante De Nigris for writing this class
 
-#ifndef __itkGPUOrientationMatchingMatrixTransformationSparseMask_hxx
-#define __itkGPUOrientationMatchingMatrixTransformationSparseMask_hxx
+#ifndef __itkGPUOrientationMatching_hxx
+#define __itkGPUOrientationMatching_hxx
 
 #include <itkMacro.h>
 #include <itkTimeProbe.h>

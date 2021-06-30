@@ -10,9 +10,12 @@ See Copyright.txt or http://ibisneuronav.org/Copyright.html for details.
 =========================================================================*/
 // Thanks to Dante De Nigris for writing this class
 
+#ifndef __itkGPU3DRigidSimilarityMetric_h
+#define __itkGPU3DRigidSimilarityMetric_h
+
 #include <itkEuler3DTransform.h>
 #include <itkSingleValuedCostFunction.h>
-#include "itkGPUOrientationMatchingMatrixTransformationSparseMask.h"
+#include "itkGPUGradientOrientationMatching.h"
 
 namespace itk
 {
@@ -117,3 +120,5 @@ private:
 };
 
 }
+
+#endif

@@ -18,21 +18,21 @@ int main(int argc, char* argv[])
     }
 
   // Reading the first file
-    typedef itk::Image<float, 3> IbisItkFloat3ImageType;
-    using ReaderType = itk::ImageFileReader<IbisItkFloat3ImageType>;
+    typedef itk::Image<float, 3> ImageType;
+    using ReaderType = itk::ImageFileReader<ImageType>;
     ReaderType::Pointer reader = ReaderType::New();
     reader->SetFileName(argv[1]);
     reader->Update();
 
-    IbisItkFloat3ImageType::Pointer image = reader->GetOutput();
+    ImageType::Pointer image = reader->GetOutput();
 
   //Reading the second file 
-    using ReaderType = itk::ImageFileReader<IbisItkFloat3ImageType>;
+    using ReaderType = itk::ImageFileReader<ImageType>;
     ReaderType::Pointer reader2 = ReaderType::New();
     reader->SetFileName(argv[2]);
     reader->Update();
 
-    IbisItkFloat3ImageType::Pointer image2 = reader->GetOutput();
+    ImageType::Pointer image2 = reader->GetOutput();
 
     return EXIT_SUCCESS;
 

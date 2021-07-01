@@ -25,15 +25,16 @@ int main(int argc, char* argv[])
     }
     
     using ImageType = itk::Image<float, 3>;
-    using ReaderType = itk::ImageFileReader<ImageType>;
+    using MovingImageReaderType = itk::ImageFileReader<ImageType>;
+    using FixedImageReaderType = itk::ImageFileReader<ImageType>;
 
     // Reading the first file
-    ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName(argv[1]);
-    
+    MovingImageReaderType::Pointer movingReader = MovingImageReaderType::New();
+    movingReader->SetFileName(argv[1]);
+    std::cout << "Reading Moving Image... " << argv[1] << std::endl;
     try
     {
-        reader->Update();
+        movingReader->Update();
     }
     catch( itk::ExceptionObject & error )
     {
@@ -41,15 +42,15 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    ImageType::Pointer movingImage = reader->GetOutput();
+    ImageType::Pointer movingImage = movingReader->GetOutput();
 
     //Reading the second file 
-    ReaderType::Pointer reader2 = ReaderType::New();
-    reader->SetFileName(argv[2]);
-    
+    FixedImageReaderType::Pointer fixedReader = FixedImageReaderType::New();
+    fixedReader->SetFileName(argv[2]);
+    std::cout << "Reading Fixed Image... " << argv[2] << std::endl;
     try
     {
-        reader->Update();
+        fixedReader->Update();
     }
     catch( itk::ExceptionObject & error )
     {
@@ -57,7 +58,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    ImageType::Pointer fixedImage = reader->GetOutput();
+    ImageType::Pointer fixedImage = fixedReader->GetOutput();
 
     //TODO: read initialization transform in a vtkTransform
 
@@ -99,6 +100,17 @@ int main(int argc, char* argv[])
     outputTransform->SetMatrix(matrix);
     outputTransform->SetOffset(offset);
     
+    // temporary testing
+    for( size_t i = 0; i < 4; i++ )
+    {
+        for( size_t j = 0; j < 4; j++ )
+        {
+            std::cout << transform->GetMatrix()->GetElement(i, j) << "\t";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "Write transform in " << argv[4] << std::endl;
     using TransformWriterType = itk::TransformFileWriterTemplate<ScalarType>;
     TransformWriterType::Pointer writer = TransformWriterType::New();
     writer->SetInput(outputTransform);
@@ -112,17 +124,6 @@ int main(int argc, char* argv[])
         std::cerr << "Error while saving the transforms:" << error << std::endl;
         return EXIT_FAILURE;
     }
-
-    // temporary testing
-    for( size_t i = 0; i < 4; i++ )
-    {
-        for( size_t j = 0; j < 4; j++ )
-        {
-            std::cout << transform->GetMatrix()->GetElement(i, j) << "\t";
-        }
-        std::cout << std::endl;
-    }
-    
 
     return EXIT_SUCCESS;
 }

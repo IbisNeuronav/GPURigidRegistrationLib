@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-  // Reading the first file
+    // Reading the first file
     typedef itk::Image<float, 3> ImageType;
     using ReaderType = itk::ImageFileReader<ImageType>;
     ReaderType::Pointer reader = ReaderType::New();
@@ -26,25 +26,21 @@ int main(int argc, char* argv[])
 
     ImageType::Pointer image = reader->GetOutput();
 
-  //Reading the second file 
-    using ReaderType = itk::ImageFileReader<ImageType>;
+    //Reading the second file 
     ReaderType::Pointer reader2 = ReaderType::New();
     reader->SetFileName(argv[2]);
     reader->Update();
 
     ImageType::Pointer image2 = reader->GetOutput();
 
-    return EXIT_SUCCESS;
-
     GPU_RigidRegistration* rigidRegistrator = new GPU_RigidRegistration();
 
     // Initialize parameters
-    /*m_rigidRegistrator->SetNumberOfPixels(ui->numebrOfPixelsDial->value());
-    m_rigidRegistrator->SetOrientationSelectivity(ui->selectivityDial->value());
-    m_rigidRegistrator->SetPopulationSize(ui->populationSizeDial->value());
-    m_rigidRegistrator->SetPercentile(ui->percentileComboBox->itemData(ui->percentileComboBox->currentIndex()).toDouble());
-    m_rigidRegistrator->SetUseMask(ui->computeMaskCheckBox->isChecked());
-    m_rigidRegistrator->SetDebug(debug, &debugStringStream);*/
+    rigidRegistrator->SetNumberOfPixels(128000);
+    rigidRegistrator->SetOrientationSelectivity(32);
+    rigidRegistrator->SetPopulationSize(100);
+    rigidRegistrator->SetPercentile(0.8);
+    rigidRegistrator->SetUseMask(true);
 
     // Set image inputs
     rigidRegistrator->SetItkSourceImage(image);
@@ -56,7 +52,6 @@ int main(int argc, char* argv[])
 
     rigidRegistrator->runRegistration();
 
-    delete rigidRegistrator;
-    t->Delete();
+    return EXIT_SUCCESS;
 }
 

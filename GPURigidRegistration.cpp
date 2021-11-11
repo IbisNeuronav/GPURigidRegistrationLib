@@ -4,19 +4,21 @@
 #include "itkTransformFileWriter.h"
 #include "gpu_rigidregistration.h"
 #include "vtkTransform.h"
+#include "itkTransformFactory.h"
 
 
 #include <iostream>
 
 int main(int argc, char* argv[])
 {
-    if (argc < 4)
+    std::cout << "ARGC: " << argc << std::endl;
+    if (argc < 3)
     {
         // check existing file
         std::cerr << "Usage: " << std::endl;
         std::cerr << argv[0];
         std::cerr << " <MovingImage> <FixedImage>";
-        std::cerr << " <InitialTransform> <OutputTransform>";
+        std::cerr << " [<OutputTransform>] [<InitialTransform>]";
         std::cerr << std::endl;
 
         //TODO: add parameter description 
@@ -61,6 +63,11 @@ int main(int argc, char* argv[])
     ImageType::Pointer fixedImage = fixedReader->GetOutput();
 
     //TODO: read initialization transform in a vtkTransform
+    std::string initialTransformFile = "";
+    if( argc > 4 )
+    {
+        initialTransformFile = argv[4];
+    }
 
     GPU_RigidRegistration* rigidRegistrator = new GPU_RigidRegistration();
 
@@ -81,7 +88,7 @@ int main(int argc, char* argv[])
 
     rigidRegistrator->runRegistration();
 
-    //TODO: write output transform in argv[4]
+    // Write output transform
     using ScalarType = double;
     using ItkRigidTransformType = itk::Euler3DTransform<ScalarType>;
     ItkRigidTransformType::Pointer outputTransform = ItkRigidTransformType::New();
@@ -100,21 +107,15 @@ int main(int argc, char* argv[])
     outputTransform->SetMatrix(matrix);
     outputTransform->SetOffset(offset);
     
-    // temporary testing
-    for( size_t i = 0; i < 4; i++ )
-    {
-        for( size_t j = 0; j < 4; j++ )
-        {
-            std::cout << transform->GetMatrix()->GetElement(i, j) << "\t";
-        }
-        std::cout << std::endl;
-    }
+    std::string outputTransformFile = "outputTransform.h5";
+    if( argc > 3 )
+        outputTransformFile = argv[3];
 
-    std::cout << "Write transform in " << argv[4] << std::endl;
+    std::cout << "Write transform in " << outputTransformFile << std::endl;
     using TransformWriterType = itk::TransformFileWriterTemplate<ScalarType>;
     TransformWriterType::Pointer writer = TransformWriterType::New();
-    writer->SetInput(outputTransform);
-    writer->SetFileName(argv[4]);
+    writer->SetInput(outputTransform->GetInverseTransform());
+    writer->SetFileName(outputTransformFile.c_str());
     try
     {
         writer->Update();

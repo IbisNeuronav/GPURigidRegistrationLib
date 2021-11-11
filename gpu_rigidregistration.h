@@ -91,6 +91,7 @@ public:
 
 
     void SetTargetMask(ImageMaskPointer mask) { this->m_targetSpatialObjectMask = mask;}
+    void SetSourceMask(ImageMaskPointer mask) { this->m_sourceSpatialObjectMask = mask; }
 
 private:
 
@@ -105,6 +106,7 @@ private:
     ImageType::Pointer m_itkTargetImage;
 
     ImageMaskPointer m_targetSpatialObjectMask;
+    ImageMaskPointer m_sourceSpatialObjectMask;
 
     vtkTransform * m_sourceVtkTransform;
     vtkTransform * m_targetVtkTransform;

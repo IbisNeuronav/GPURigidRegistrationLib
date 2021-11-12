@@ -4,34 +4,73 @@
 #include "itkTransformFileWriter.h"
 #include "gpu_rigidregistration.h"
 #include "vtkTransform.h"
+#include "itkTransformFactory.h"
+#include "itkImageMaskSpatialObject.h"
 
-
+#include "vtksys/CommandLineArguments.hxx"
 #include <iostream>
 
 int main(int argc, char* argv[])
 {
-    if (argc < 4)
+    // Check command line arguments.
+    bool printHelp = false;
+    std::string movingImageFileName;
+    std::string fixedImageFileName;
+    std::string initialTransformFileName;
+    std::string outputTransformFileName;
+    std::string fixedMaskFileName;
+    std::string movingMaskFileName;
+    
+    vtksys::CommandLineArguments args;
+    args.Initialize(argc, argv);
+    args.StoreUnusedArguments(true);
+
+    args.AddArgument("--help", vtksys::CommandLineArguments::NO_ARGUMENT, &printHelp, "Print this help.");
+    args.AddArgument("--initial-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &initialTransformFileName, "Name of the initial transform file.");
+    args.AddArgument("--output-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &outputTransformFileName, "Name of the output transform file (default outputTransform.h5).");
+    args.AddArgument("--fixed-mask", vtksys::CommandLineArguments::SPACE_ARGUMENT, &fixedMaskFileName, "Name of the fixed image mask file.");
+    args.AddArgument("--moving-mask", vtksys::CommandLineArguments::SPACE_ARGUMENT, &movingMaskFileName, "Name of the moving image mask file.");
+
+    args.Parse();
+    if( printHelp )
     {
-        // check existing file
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << argv[0];
-        std::cerr << " <MovingImage> <FixedImage>";
-        std::cerr << " <InitialTransform> <OutputTransform>";
-        std::cerr << std::endl;
-
-        //TODO: add parameter description 
-
+        std::cerr << "Problem parsing arguments." << std::endl;
+        std::cout << "Help: " << args.GetHelp() << std::endl;
         return EXIT_FAILURE;
+    }
+
+    char ** newArgv = nullptr;
+    int newArgc = 0;
+    args.GetUnusedArguments(&newArgc, &newArgv);
+
+    if( newArgc < 3 )
+    {
+        std::cout << "Usage: " << argv[0] << " movingImage fixedImage [options]" << std::endl;
+        std::cout << "Options: " << args.GetHelp() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    movingImageFileName = newArgv[1];
+    fixedImageFileName = newArgv[2];
+
+    if( outputTransformFileName.empty() )
+    {
+        std::cout << "No output transform file specified. Resulting transform will be written in outputTransform.h5" << std::endl;
+        outputTransformFileName = "outputTransform.h5";
     }
     
     using ImageType = itk::Image<float, 3>;
     using MovingImageReaderType = itk::ImageFileReader<ImageType>;
     using FixedImageReaderType = itk::ImageFileReader<ImageType>;
-
-    // Reading the first file
+    using ImageMaskType = itk::ImageMaskSpatialObject< 3 >;
+    
+    ImageMaskType::Pointer fixedMask = nullptr;
+    ImageMaskType::Pointer movingMask = nullptr;
+    
+    // Reading moving image file
     MovingImageReaderType::Pointer movingReader = MovingImageReaderType::New();
-    movingReader->SetFileName(argv[1]);
-    std::cout << "Reading Moving Image... " << argv[1] << std::endl;
+    movingReader->SetFileName(movingImageFileName.c_str());
+    std::cout << "Reading Moving Image... " << movingImageFileName << std::endl;
     try
     {
         movingReader->Update();
@@ -44,10 +83,10 @@ int main(int argc, char* argv[])
 
     ImageType::Pointer movingImage = movingReader->GetOutput();
 
-    //Reading the second file 
+    //Reading fixed image file 
     FixedImageReaderType::Pointer fixedReader = FixedImageReaderType::New();
-    fixedReader->SetFileName(argv[2]);
-    std::cout << "Reading Fixed Image... " << argv[2] << std::endl;
+    fixedReader->SetFileName(fixedImageFileName.c_str());
+    std::cout << "Reading Fixed Image... " << fixedImageFileName << std::endl;
     try
     {
         fixedReader->Update();
@@ -60,7 +99,54 @@ int main(int argc, char* argv[])
 
     ImageType::Pointer fixedImage = fixedReader->GetOutput();
 
-    //TODO: read initialization transform in a vtkTransform
+    if( !initialTransformFileName.empty() )
+    {
+        //TODO: read initialization transform in a vtkTransform
+    }
+
+    if( !movingMaskFileName.empty() )
+    {
+        // Reading moving mask file
+        using MaskReaderType = itk::ImageFileReader<ImageMaskType::ImageType>;
+        MaskReaderType::Pointer movingMaskReader = MaskReaderType::New();
+        movingMaskReader->SetFileName(movingMaskFileName.c_str());
+        std::cout << "Reading Moving Mask... " << movingMaskFileName << std::endl;
+
+        try
+        {
+            movingMaskReader->Update();
+            movingMask = ImageMaskType::New();
+            movingMask->SetImage(movingMaskReader->GetOutput());
+            movingMask->Update();
+        }
+        catch( itk::ExceptionObject & error )
+        {
+            std::cerr << "Error: " << error << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+
+    if( !fixedMaskFileName.empty() )
+    {
+        // Reading fixed mask file
+        using MaskReaderType = itk::ImageFileReader<ImageMaskType::ImageType>;
+        MaskReaderType::Pointer fixedMaskReader = MaskReaderType::New();
+        fixedMaskReader->SetFileName(fixedMaskFileName.c_str());
+        std::cout << "Reading Fixed Mask... " << fixedMaskFileName << std::endl;
+
+        try
+        {
+            fixedMaskReader->Update();
+            fixedMask = ImageMaskType::New();
+            fixedMask->SetImage(fixedMaskReader->GetOutput());
+            fixedMask->Update();
+        }
+        catch( itk::ExceptionObject & error )
+        {
+            std::cerr << "Error: " << error << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
 
     GPU_RigidRegistration* rigidRegistrator = new GPU_RigidRegistration();
 
@@ -79,9 +165,19 @@ int main(int argc, char* argv[])
     vtkTransform * transform = vtkTransform::New();
     rigidRegistrator->SetVtkTransform(transform);
 
+    if( movingMask )
+    {
+        rigidRegistrator->SetSourceMask(movingMask);
+    }
+
+    if( fixedMask )
+    {
+        rigidRegistrator->SetTargetMask(fixedMask);
+    }
+
     rigidRegistrator->runRegistration();
 
-    //TODO: write output transform in argv[4]
+    // Write output transform
     using ScalarType = double;
     using ItkRigidTransformType = itk::Euler3DTransform<ScalarType>;
     ItkRigidTransformType::Pointer outputTransform = ItkRigidTransformType::New();
@@ -100,21 +196,10 @@ int main(int argc, char* argv[])
     outputTransform->SetMatrix(matrix);
     outputTransform->SetOffset(offset);
     
-    // temporary testing
-    for( size_t i = 0; i < 4; i++ )
-    {
-        for( size_t j = 0; j < 4; j++ )
-        {
-            std::cout << transform->GetMatrix()->GetElement(i, j) << "\t";
-        }
-        std::cout << std::endl;
-    }
-
-    std::cout << "Write transform in " << argv[4] << std::endl;
     using TransformWriterType = itk::TransformFileWriterTemplate<ScalarType>;
     TransformWriterType::Pointer writer = TransformWriterType::New();
-    writer->SetInput(outputTransform);
-    writer->SetFileName(argv[4]);
+    writer->SetInput(outputTransform->GetInverseTransform());
+    writer->SetFileName(outputTransformFileName.c_str());
     try
     {
         writer->Update();

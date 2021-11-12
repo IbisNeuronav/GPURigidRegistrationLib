@@ -135,8 +135,8 @@ GPU_RigidRegistration::GPU_RigidRegistration( ) :
     m_initialSigma(1.0),
     m_gradientScale(1.0),
     m_numberOfPixels(16000),
-    m_orientationSelectivity(2),
-    m_populationSize(0),
+    m_orientationSelectivity(16),
+    m_populationSize(80),
     m_parentVtkTransform(nullptr),
     m_sourceVtkTransform(nullptr),
     m_targetVtkTransform(nullptr),
@@ -221,14 +221,20 @@ void GPU_RigidRegistration::runRegistration()
 
     if ( m_targetSpatialObjectMask )
     {
-        *this->m_debugStream << "Using fixed  mask" << std::endl;
+        if( m_debug )
+        {
+            *this->m_debugStream << "Using fixed  mask" << std::endl;
+        }
         metric->SetFixedImageMaskSpatialObject(m_targetSpatialObjectMask);
         metric->SetUseFixedImageMask(true);
     }
 
     if( m_sourceSpatialObjectMask )
     {
-        *this->m_debugStream << "Using moving mask" << std::endl;
+        if( m_debug )
+        {
+            *this->m_debugStream << "Using moving mask" << std::endl;
+        }
         metric->SetMovingImageMaskSpatialObject(m_sourceSpatialObjectMask);
         metric->SetUseMovingImageMask(true);
     }
@@ -359,7 +365,7 @@ void GPU_RigidRegistration::runRegistration()
     if(m_debug)
     {
         *this->m_debugStream << "Done." << std::endl;
-      timer.Report(*this->m_debugStream);
+        timer.Report(*this->m_debugStream);
     }
 
     m_OptimizationRunning = false;

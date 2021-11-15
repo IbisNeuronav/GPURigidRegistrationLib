@@ -11,7 +11,6 @@ set( CMAKE_CXX_STANDARD 11 )
 # Look for VTK, only using vtkTransform, so any version should work
 #==================================================================
 find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
 
 #==================================================================
 # Look for ITK, version should be > 4.12
@@ -32,7 +31,7 @@ include_directories( ${Elastix_DIR}/../src/Components/Optimizers/CMAEvolutionStr
 #==================================================================
 set( CL_files 
         GPUDiscreteGaussianGradientImageFilter 
-        GPUGradientOrientationMatchingKernel)
+        GPUGradientOrientationMatchingKernel )
 
 set( SRC_files
         gpu_rigidregistration.cpp )
@@ -41,7 +40,7 @@ set( HDR_files
         gpu_rigidregistration.h
         itkGPUGradientOrientationMatching.hxx
         itkGPU3DRigidSimilarityMetric.h
-        itkGPUGradientOrientationMatching.h)
+        itkGPUGradientOrientationMatching.h )
 
 #================================
 # Create custom commands to
@@ -50,29 +49,47 @@ set( HDR_files
 # file.
 #================================
 # Find vtkEncodeString utility executable. Look in built or installed dir structure
-set( vtkEncodeStringExeFile vtkEncodeString-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION} )
-find_program( VTK_ENCODESTRING_EXE ${vtkEncodeStringExeFile} PATHS
-              ${VTK_DIR}/bin/
-              ${VTK_DIR}/bin/Debug/
-              ${VTK_DIR}/bin/Release/
-              ${VTK_INSTALL_PREFIX}/bin
-              NO_DEFAULT_PATH )
-if( NOT VTK_ENCODESTRING_EXE )
-    message( FATAL_ERROR "the vtkEncodeString executable could not be found in the VTK directory.")
-endif()
+if( ${VTK_MAJOR_VERSION} LESS "9" )
 
-foreach( file ${CL_files} )
-  set( clKernel_src ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cl )
-  set( clKernel_cxx ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx )
-  set( clKernel_h ${CMAKE_CURRENT_BINARY_DIR}/${file}.h )
-  add_custom_command(
-    OUTPUT ${clKernel_cxx} ${clKernel_h}
-    DEPENDS ${clKernel_src}
-    COMMAND ${VTK_ENCODESTRING_EXE}
-    ARGS ${clKernel_cxx} ${clKernel_src} ${file} --build-header " " vtkSystemIncludes.h )
-  set( SRC_CL ${SRC_CL} ${clKernel_src} ${clKernel_h} ${clKernel_cxx} )
-  set( HDR_CL ${HDR_CL} ${clKernel_h} )
-endforeach(file)
+  include(${VTK_USE_FILE})
+  set( vtkEncodeStringExeFile vtkEncodeString-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION} )
+  find_program( VTK_ENCODESTRING_EXE ${vtkEncodeStringExeFile} PATHS
+                ${VTK_DIR}/bin/
+                ${VTK_DIR}/bin/Debug/
+                ${VTK_DIR}/bin/Release/
+                ${VTK_INSTALL_PREFIX}/bin
+                NO_DEFAULT_PATH )
+  if( NOT VTK_ENCODESTRING_EXE )
+      message( FATAL_ERROR "the vtkEncodeString executable could not be found in the VTK directory.")
+  endif()
+  
+  foreach( file ${CL_files} )
+    set( clKernel_src ${CMAKE_CURRENT_SOURCE_DIR}/${file}.cl )
+    set( clKernel_cxx ${CMAKE_CURRENT_BINARY_DIR}/${file}.cxx )
+    set( clKernel_h ${CMAKE_CURRENT_BINARY_DIR}/${file}.h )
+    add_custom_command(
+      OUTPUT ${clKernel_cxx} ${clKernel_h}
+      DEPENDS ${clKernel_src}
+      COMMAND ${VTK_ENCODESTRING_EXE}
+      ARGS ${clKernel_cxx} ${clKernel_src} ${file} --build-header " " vtkSystemIncludes.h )
+    set( SRC_CL ${SRC_CL} ${clKernel_src} ${clKernel_h} ${clKernel_cxx} )
+    set( HDR_CL ${HDR_CL} ${clKernel_h} )
+  endforeach(file)
+  
+else()
+
+  set( LibCLSrc )
+  set( LibCLHdr )
+  foreach (shader_file IN LISTS CL_files)
+    vtk_encode_string(
+      INPUT         "${shader_file}.cl"
+      HEADER_OUTPUT clKernel_h
+      SOURCE_OUTPUT clKernel_cxx)
+    list(APPEND SRC_CL ${clKernel_cxx})
+    list(APPEND HDR_CL ${clKernel_h})
+  endforeach ()
+
+endif()
 
 #================================
 # Define output

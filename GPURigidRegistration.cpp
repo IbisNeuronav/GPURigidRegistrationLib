@@ -4,8 +4,13 @@
 #include "itkTransformFileWriter.h"
 #include "gpu_rigidregistration.h"
 #include "vtkTransform.h"
+#include "vtkMatrix4x4.h"
 #include "itkTransformFactory.h"
 #include "itkImageMaskSpatialObject.h"
+#include "itkTransformFileReader.h"
+
+#include "utils/vtkXFMReader.h"
+#include "utils/vtkXFMWriter.h"
 
 #include "vtksys/CommandLineArguments.hxx"
 #include <iostream>
@@ -26,8 +31,8 @@ int main(int argc, char* argv[])
     args.StoreUnusedArguments(true);
 
     args.AddArgument("--help", vtksys::CommandLineArguments::NO_ARGUMENT, &printHelp, "Print this help.");
-    args.AddArgument("--initial-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &initialTransformFileName, "Name of the initial transform file.");
-    args.AddArgument("--output-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &outputTransformFileName, "Name of the output transform file (default outputTransform.h5).");
+    args.AddArgument("--initial-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &initialTransformFileName, "Name of the initial transform file (*.xfm).");
+    args.AddArgument("--output-transform", vtksys::CommandLineArguments::SPACE_ARGUMENT, &outputTransformFileName, "Name of the output transform file (default outputTransform.xfm).");
     args.AddArgument("--fixed-mask", vtksys::CommandLineArguments::SPACE_ARGUMENT, &fixedMaskFileName, "Name of the fixed image mask file.");
     args.AddArgument("--moving-mask", vtksys::CommandLineArguments::SPACE_ARGUMENT, &movingMaskFileName, "Name of the moving image mask file.");
 
@@ -56,10 +61,12 @@ int main(int argc, char* argv[])
     if( outputTransformFileName.empty() )
     {
         std::cout << "No output transform file specified. Resulting transform will be written in outputTransform.h5" << std::endl;
-        outputTransformFileName = "outputTransform.h5";
+        outputTransformFileName = "outputTransform.xfm";
     }
     
-    using ImageType = itk::Image<float, 3>;
+    const unsigned int Dimension = 3;
+    using PixelType = float;
+    using ImageType = itk::Image<PixelType, Dimension>;
     using MovingImageReaderType = itk::ImageFileReader<ImageType>;
     using FixedImageReaderType = itk::ImageFileReader<ImageType>;
     using ImageMaskType = itk::ImageMaskSpatialObject< 3 >;
@@ -82,7 +89,7 @@ int main(int argc, char* argv[])
     }
 
     ImageType::Pointer movingImage = movingReader->GetOutput();
-
+    
     //Reading fixed image file 
     FixedImageReaderType::Pointer fixedReader = FixedImageReaderType::New();
     fixedReader->SetFileName(fixedImageFileName.c_str());
@@ -99,9 +106,26 @@ int main(int argc, char* argv[])
 
     ImageType::Pointer fixedImage = fixedReader->GetOutput();
 
+    vtkTransform * movingTransform = nullptr;
+
     if( !initialTransformFileName.empty() )
     {
-        //TODO: read initialization transform in a vtkTransform
+        //read initialization transform in a vtkTransform
+        std::cout << "Reading Initial Transform for Moving Image... " << initialTransformFileName << std::endl;
+
+        movingTransform = vtkTransform::New();
+        vtkMatrix4x4 * mat = vtkMatrix4x4::New();
+        vtkXFMReader * reader = vtkXFMReader::New();
+        if( reader->CanReadFile(initialTransformFileName.c_str()) )
+        {
+            reader->SetFileName(initialTransformFileName.c_str());
+            reader->SetMatrix(mat);
+            reader->Update();
+            reader->Delete();
+        }
+        
+        movingTransform->SetMatrix(mat);
+
     }
 
     if( !movingMaskFileName.empty() )
@@ -161,6 +185,11 @@ int main(int argc, char* argv[])
     rigidRegistrator->SetItkSourceImage(movingImage);
     rigidRegistrator->SetItkTargetImage(fixedImage);
 
+    if( movingTransform )
+    {
+        rigidRegistrator->SetSourceVtkTransform(movingTransform);
+    }
+
     // Set transform inputs
     vtkTransform * transform = vtkTransform::New();
     rigidRegistrator->SetVtkTransform(transform);
@@ -178,37 +207,10 @@ int main(int argc, char* argv[])
     rigidRegistrator->runRegistration();
 
     // Write output transform
-    using ScalarType = double;
-    using ItkRigidTransformType = itk::Euler3DTransform<ScalarType>;
-    ItkRigidTransformType::Pointer outputTransform = ItkRigidTransformType::New();
-    ItkRigidTransformType::MatrixType matrix;
-    ItkRigidTransformType::OffsetType offset;
-
-    for( unsigned int i = 0; i < 3; i++ )
-    {
-        for( unsigned int j = 0; j < 3; j++ )
-        {
-            matrix.GetVnlMatrix().set(i, j, transform->GetMatrix()->GetElement(i, j));
-        }
-        offset[i] = transform->GetMatrix()->GetElement(i, 3);
-    }
-
-    outputTransform->SetMatrix(matrix);
-    outputTransform->SetOffset(offset);
-    
-    using TransformWriterType = itk::TransformFileWriterTemplate<ScalarType>;
-    TransformWriterType::Pointer writer = TransformWriterType::New();
-    writer->SetInput(outputTransform->GetInverseTransform());
-    writer->SetFileName(outputTransformFileName.c_str());
-    try
-    {
-        writer->Update();
-    }
-    catch( itk::ExceptionObject & error )
-    {
-        std::cerr << "Error while saving the transforms:" << error << std::endl;
-        return EXIT_FAILURE;
-    }
+    vtkXFMWriter * transformWriter = vtkXFMWriter::New();
+    transformWriter->SetFileName(outputTransformFileName.c_str());
+    transformWriter->SetMatrix(transform->GetMatrix());
+    transformWriter->Write();
 
     return EXIT_SUCCESS;
 }

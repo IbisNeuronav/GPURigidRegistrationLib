@@ -103,5 +103,5 @@ add_library( ${libName} ${SRC_files} ${HDR_files} ${SRC_CL} ${HDR_CL} )
 target_link_libraries( ${libName} ${ITK_LIBRARIES}  ${VTK_LIBRARIES} ${ELASTIX_LIBRARIES} vtkMNI )
 target_include_directories( ${libName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 
-add_executable( GPURigidRegistration GPURigidRegistration.cpp )
+add_executable( GPURigidRegistration main.cpp )
 target_link_libraries( GPURigidRegistration ${libName} )

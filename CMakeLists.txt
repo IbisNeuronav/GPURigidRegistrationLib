@@ -7,6 +7,16 @@ project( GPURigidRegistration )
 set( CMAKE_CXX_STANDARD 11 )
 #----------------------------------------
 
+#-----------------------------------------------------------------------------
+# GIT - Let's check if a valid version of GIT is available
+#-----------------------------------------------------------------------------
+OPTION(USE_GIT_PROTOCOL "If behind a firewall turn this off to use https instead." OFF)
+
+SET(GIT_PROTOCOL "git")
+IF(NOT USE_GIT_PROTOCOL)
+   SET(GIT_PROTOCOL "https")
+ENDIF()
+
 #==================================================================
 # Look for VTK, only using vtkTransform, so any version should work
 #==================================================================
@@ -105,3 +115,15 @@ target_include_directories( ${libName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 
 add_executable( GPURigidRegistration main.cpp )
 target_link_libraries( GPURigidRegistration ${libName} )
+
+#================================
+# Define tests
+#================================
+
+option(BUILD_TEST "Enable testing for GPURigidRegistration." ON)
+
+if(BUILD_TEST)
+   include(ExternalProject)
+   enable_testing()
+   add_subdirectory(tests)
+endif()

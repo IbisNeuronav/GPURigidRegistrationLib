@@ -10,6 +10,8 @@
 
 #include <iostream>
 
+int runAccuracyTest(const char *, const char *);
+
 int main(int argc, char * argv[])
 {
     if( argc < 2 )
@@ -109,6 +111,6 @@ int main(int argc, char * argv[])
 
     rigidRegistrator->runRegistration();
 
-    return EXIT_SUCCESS;
+    return runAccuracyTest(dataDir.c_str(), "ImageRegistrationTest-output.xfm");
 }
 

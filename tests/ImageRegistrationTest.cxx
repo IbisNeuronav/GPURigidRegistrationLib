@@ -5,7 +5,11 @@
 #include "vtkTransform.h"
 #include "vtkMatrix4x4.h"
 
+#include "../utils/vtkXFMWriter.h"
+
 #include <iostream>
+
+int runAccuracyTest(const char *, const char *);
 
 int main(int argc, char * argv[])
 {
@@ -80,6 +84,12 @@ int main(int argc, char * argv[])
 
     rigidRegistrator->runRegistration();
 
-    return EXIT_SUCCESS;
+    // Write output transform
+    vtkXFMWriter * transformWriter = vtkXFMWriter::New();
+    transformWriter->SetFileName("ImageRegistrationTest-output.xfm");
+    transformWriter->SetMatrix(transform->GetMatrix());
+    transformWriter->Write();
+
+    return runAccuracyTest(dataDir.c_str(), "ImageRegistrationTest-output.xfm");
 }
 

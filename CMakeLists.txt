@@ -126,7 +126,7 @@ if(BUILD_EXECUTABLE)
 # Build vtkMNI utility lib (only needed by the executable)
    add_subdirectory(utils)
 
-   add_executable( GPURigidRegistration main.cpp )
+   add_executable( GPURigidRegistration utils/main.cpp )
    target_link_libraries( GPURigidRegistration ${libName} vtkMNI )
 
 else()

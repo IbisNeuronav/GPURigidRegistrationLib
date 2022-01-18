@@ -13,6 +13,6 @@ add_test(NAME ImageRegistrationTest COMMAND ImageRegistrationTest ${TestDataDir}
 add_test(NAME ImageRegistrationWithInitialTransformTest COMMAND ImageRegistrationWithInitialTransformTest ${TestDataDir})
 add_test(NAME ImageRegistrationWithMaskTest COMMAND ImageRegistrationWithMaskTest ${TestDataDir})
 
-target_link_libraries( ImageRegistrationTest ${VTK_LIBRARIES} ${libName} ${vtkMNI} )
-target_link_libraries( ImageRegistrationWithInitialTransformTest ${VTK_LIBRARIES} ${libName} ${vtkMNI} )
-target_link_libraries( ImageRegistrationWithMaskTest ${VTK_LIBRARIES} ${libName} ${vtkMNI} )
+target_link_libraries( ImageRegistrationTest ${VTK_LIBRARIES} ${libName} vtkMNI )
+target_link_libraries( ImageRegistrationWithInitialTransformTest ${VTK_LIBRARIES} ${libName} vtkMNI )
+target_link_libraries( ImageRegistrationWithMaskTest ${VTK_LIBRARIES} ${libName} vtkMNI )

@@ -111,20 +111,40 @@ add_library( ${libName} ${SRC_files} ${HDR_files} ${SRC_CL} ${HDR_CL} )
 target_link_libraries( ${libName} ${ITK_LIBRARIES}  ${VTK_LIBRARIES} ${ELASTIX_LIBRARIES} )
 target_include_directories( ${libName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 
-# Build vtkMNI utility lib (only needed by the executable)
-add_subdirectory(utils)
+#================================
+# Options
+#================================
 
-add_executable( GPURigidRegistration main.cpp )
-target_link_libraries( GPURigidRegistration ${libName} vtkMNI )
+option(BUILD_EXECUTABLE "Generate executable for GPURigidRegistration." ON)
+option(BUILD_TEST "Enable testing for GPURigidRegistration.\n" ON)
+
+#================================
+# Define executable
+#================================
+
+if(BUILD_EXECUTABLE)
+# Build vtkMNI utility lib (only needed by the executable)
+   add_subdirectory(utils)
+
+   add_executable( GPURigidRegistration main.cpp )
+   target_link_libraries( GPURigidRegistration ${libName} vtkMNI )
+
+else()
+   # disable testing
+   set(BUILD_TEST OFF)
+   message( WARNING "Testing has been disabled." )
+endif()
 
 #================================
 # Define tests
 #================================
 
-option(BUILD_TEST "Enable testing for GPURigidRegistration." ON)
-
 if(BUILD_TEST)
-   include(ExternalProject)
-   enable_testing()
-   add_subdirectory(tests)
+   if(NOT BUILD_EXECUTABLE)
+      message( SEND_ERROR "Need to generate executable for testing. Please set BUILD_EXECUTABLE ON or turn disable BUILD_TEST.\n" )
+   else()
+      include(ExternalProject)
+      enable_testing()
+      add_subdirectory(tests)
+   endif()
 endif()

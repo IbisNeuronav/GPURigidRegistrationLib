@@ -101,8 +101,6 @@ else()
 
 endif()
 
-# Include directories
-add_subdirectory(utils)
 
 #================================
 # Define output
@@ -110,11 +108,14 @@ add_subdirectory(utils)
 set( libName GPURigidRegistrationLib )
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_library( ${libName} ${SRC_files} ${HDR_files} ${SRC_CL} ${HDR_CL} )
-target_link_libraries( ${libName} ${ITK_LIBRARIES}  ${VTK_LIBRARIES} ${ELASTIX_LIBRARIES} vtkMNI )
+target_link_libraries( ${libName} ${ITK_LIBRARIES}  ${VTK_LIBRARIES} ${ELASTIX_LIBRARIES} )
 target_include_directories( ${libName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
 
+# Build vtkMNI utility lib (only needed by the executable)
+add_subdirectory(utils)
+
 add_executable( GPURigidRegistration main.cpp )
-target_link_libraries( GPURigidRegistration ${libName} )
+target_link_libraries( GPURigidRegistration ${libName} vtkMNI )
 
 #================================
 # Define tests

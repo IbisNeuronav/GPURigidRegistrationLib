@@ -6,6 +6,7 @@
 
 #include <string> 
 #include <iostream>
+#include <cmath>
 
 // accuracy threshold to pass the test in mm
 #define THRESHOLD 3 

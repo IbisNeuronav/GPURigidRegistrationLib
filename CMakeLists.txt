@@ -131,8 +131,11 @@ if(GPURR_BUILD_EXECUTABLE)
 
 else()
    # disable testing
+   if(GPURR_BUILD_TEST)
+      message( WARNING "Testing has been disabled." )
+   endif()
    set(GPURR_BUILD_TEST OFF)
-   message( WARNING "Testing has been disabled." )
+   
 endif()
 
 #================================
@@ -141,7 +144,7 @@ endif()
 
 if(GPURR_BUILD_TEST)
    if(NOT GPURR_BUILD_EXECUTABLE)
-      message( SEND_ERROR "Need to generate executable for testing. Please set GPURR_BUILD_EXECUTABLE ON or turn disable GPURR_BUILD_TEST.\n" )
+      message( SEND_ERROR "Need to generate executable for testing. Please set GPURR_BUILD_EXECUTABLE ON or disable GPURR_BUILD_TEST.\n" )
    else()
       include(ExternalProject)
       enable_testing()

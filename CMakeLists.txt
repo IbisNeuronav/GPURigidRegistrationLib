@@ -134,7 +134,7 @@ else()
    if(GPURR_BUILD_TEST)
       message( WARNING "Testing has been disabled." )
    endif()
-   set(GPURR_BUILD_TEST OFF)
+   set(GPURR_BUILD_TEST OFF CACHE BOOL "Disable tests." FORCE)
    
 endif()
 
